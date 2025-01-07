@@ -29,4 +29,6 @@ cd droidpad-python-examples/servers
   - On Windows, use the `ipconfig` command.
   - On Linux, use the `ifconfig` command.
 
+For BLE navigate to `BLEClient` directory and run `python subscribe.py`
+
 Create a new controller in [DroidPad](https://github.com/umer0586/DroidPad). Then, navigate to the connection settings and specify the IP address and port number. Once connected, and you should see JSON messages being printed in the console.
