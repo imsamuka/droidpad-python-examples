@@ -40,7 +40,7 @@ if len(sys.argv) > 1 and sys.argv[1].isnumeric:
     PORT = int(sys.argv[1])
 
 def onData(data):
-    print(data)
+    print(data.decode())
 
 
 server = UDPServer(address=("0.0.0.0",PORT))
