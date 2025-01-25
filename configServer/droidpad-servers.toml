@@ -1,4 +1,73 @@
 [default]
 host = "0.0.0.0"
-port = 8081
+port = 8080
 type = "UDP" # Only "TCP" or "UDP" accepted
+
+# What will be executed when the event is detected
+# "sh" - passthrough to the 'sh' executable
+# "bash" - passthrough to the 'bash' executable
+# "py" - passthrough to the 'python' executable
+# "eval" - plain eval() python call, with scope variables
+# "exec" - passthrough a list of arguments to any executable
+default_eval = "sh"
+
+# How the commands will run and wait others
+call_sync = "threaded_async" # "simple", "threaded_sync" or "threaded_async"
+
+# the pattern '__{ ... }__' will be intepreted like a python fstring
+fstring_sim = true
+
+# the pattern '{ ... }' will be interpreted with python format_map()
+format_map = true
+
+[default.rules]
+
+# examples
+arrows-dp_click = "xdotool key __{button.title()}__"
+arrows-dp_button = "xdotool key__{'down' if state == 'PRESS' else 'up'}__ __{button.title()}__"
+volume-slider-sh = 'playerctl volume {value}; echo "Volume at {value:%}"'
+uptime-click-bash = 'notify-send "$(uptime)"'
+resume-switch-exec = ["playerctl", "__{'play' if state else 'pause'}__"]
+radius-joy-py = "import math; print('Radius: ', math.atan2({y}, {x}) * 180.0 / math.pi)"
+
+
+# Switch
+ctl_id-switch = "echo {id} {state}"
+ctl_id-true = "echo {id} true"
+ctl_id-false = "echo {id} false"
+
+# Joystick
+ctl_id-joy = "echo {id} x:{x} y:{y}"
+
+# Slider
+ctl_id-slider = "echo {id} value:{value}"
+
+# Button
+ctl_id-button = "echo {id} {state}"
+ctl_id-press = "echo {id} pressed"
+ctl_id-release = "echo {id} released"
+ctl_id-click = "echo {id} clicked"
+
+# DPad
+ctl_id-dp_button = "echo {id} {button} {state}"
+
+ctl_id-dp_press = "echo {id} {button} pressed"
+ctl_id-dp_release = "echo {id} {button} released"
+ctl_id-dp_click = "echo {id} {button} clicked"
+
+ctl_id-dp_left_press = "echo {id} left pressed"
+ctl_id-dp_left_release = "echo {id} left released"
+ctl_id-dp_left_click = "echo {id} left clicked"
+
+ctl_id-dp_right_press = "echo {id} right pressed"
+ctl_id-dp_right_release = "echo {id} right released"
+ctl_id-dp_right_click = "echo {id} right clicked"
+
+ctl_id-dp_up_press = "echo {id} up pressed"
+ctl_id-dp_up_release = "echo {id} up released"
+ctl_id-dp_up_click = "echo {id} up clicked"
+
+ctl_id-dp_down_press = "echo {id} down pressed"
+ctl_id-dp_down_release = "echo {id} down released"
+ctl_id-dp_down_click = "echo {id} down clicked"
+
