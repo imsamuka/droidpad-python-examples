@@ -1,10 +1,78 @@
 import re
+import sys
 import threading
 import tomllib
 import socketserver
 import json
 import subprocess
 
+
+def create_servers(config):
+    servers = []
+    for pad, pad_config in config.items():
+        if not isinstance(pad_config, dict):
+            print(f"[Error] Invalid configuration for pad '{pad}'.")
+            continue
+
+        pad_host = pad_config.setdefault("host", "0.0.0.0")
+        pad_port = pad_config.setdefault("port", 8080)
+        pad_type = pad_config.setdefault("type", "UDP").upper()
+        pad_rules = pad_config.setdefault("rules", {})
+
+        pad_config["fstring_sim"] = pad_config.get("fstring_sim", True)
+        pad_config["format_map"] = pad_config.get("format_map", True)
+        pad_config["default_eval"] = pad_config.get("default_eval", "sh").lower()
+        pad_config["call_sync"] = pad_config.get("call_sync", "threaded_async").lower()
+
+
+        if not isinstance(pad_port, int):
+            print(f"[Error] Port in pad '{pad}' is not a integer.")
+            continue
+
+        if not isinstance(pad_rules, dict):
+            print(f"[Error] Rules in pad '{pad}' are not in the correct format.")
+            continue
+
+        if not isinstance(pad_config["fstring_sim"], bool):
+            print(f"[Error] 'fstring_sim' in pad '{pad}' is not a boolean true or false.")
+            continue
+
+        if not isinstance(pad_config["format_map"], bool):
+            print(f"[Error] 'format_map' in pad '{pad}' is not a boolean true or false.")
+            continue
+
+        choices = ("sh", "bash", "py", "eval", "exec")
+        if pad_config["default_eval"] not in choices:
+            print(f"[Error] 'default_eval' in pad '{pad}' should be one of {repr(choices)}")
+            continue
+
+        choices = ("simple", "threaded_sync", "threaded_async")
+        if pad_config["call_sync"] not in choices:
+            print(f"[Error] 'call_sync' in pad '{pad}' should be one of {repr(choices)}")
+            continue
+
+        server_address = (pad_host, pad_port)
+        match pad_type:
+            case "TCP":
+                ServerClass = TCPServer
+                RequestHandlerClass = TCPHandler
+            case "UDP":
+                ServerClass = UDPServer
+                RequestHandlerClass = UDPHandler
+            case _type:
+                print(f"[Error] Server type '{_type}' in pad '{
+                    pad}' is invalid, only 'TCP' and 'UDP' supported")
+                continue
+
+        # Start server thread
+        server = ServerClass(server_address, RequestHandlerClass)
+        server.setup_rules(pad_rules, pad_config)
+        server_thread = threading.Thread(target=server.serve_forever)
+        server_thread.start()
+        print(f"{pad_type} Server {
+            server_address} running in thread {server_thread.name}")
+        servers.append((server, server_thread))
+    return servers
 
 
 class RulesMixIn(socketserver.BaseServer):
@@ -198,73 +266,13 @@ class UDPServer(RulesMixIn, socketserver.UDPServer):
     pass  # A thread for each UDP datagram is overkill
 
 
-# Read config file
-with open("configServer/droidpad-servers.toml", "rb") as f:
-    config = tomllib.load(f)
+if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1]:
+        config_file = sys.argv[1]
+    else:
+        config_file = "configServer/droidpad-servers.toml"
 
+    with open(config_file, "rb") as f:
+        config = tomllib.load(f)
 
-# Create all servers
-servers = []
-for pad, pad_config in config.items():
-    if not isinstance(pad_config, dict):
-        print(f"[Error] Invalid configuration for pad '{pad}'.")
-        continue
-
-    pad_host = pad_config.setdefault("host", "0.0.0.0")
-    pad_port = pad_config.setdefault("port", 8080)
-    pad_type = pad_config.setdefault("type", "UDP").upper()
-    pad_rules = pad_config.setdefault("rules", {})
-
-    pad_config["fstring_sim"] = pad_config.get("fstring_sim", False)
-    pad_config["format_map"] = pad_config.get("format_map", True)
-    pad_config["default_eval"] = pad_config.get("default_eval", "sh").lower()
-    pad_config["call_sync"] = pad_config.get("call_sync", "threaded_async").lower()
-
-
-    if not isinstance(pad_port, int):
-        print(f"[Error] Port in pad '{pad}' is not a integer.")
-        continue
-
-    if not isinstance(pad_rules, dict):
-        print(f"[Error] Rules in pad '{pad}' are not in the correct format.")
-        continue
-
-    if not isinstance(pad_config["fstring_sim"], bool):
-        print(f"[Error] 'fstring_sim' in pad '{pad}' is not a boolean true or false.")
-        continue
-
-    if not isinstance(pad_config["format_map"], bool):
-        print(f"[Error] 'format_map' in pad '{pad}' is not a boolean true or false.")
-        continue
-
-    choices = ("sh", "bash", "py", "eval", "exec")
-    if pad_config["default_eval"] not in choices:
-        print(f"[Error] 'default_eval' in pad '{pad}' should be one of {repr(choices)}")
-        continue
-
-    choices = ("simple", "threaded_sync", "threaded_async")
-    if pad_config["call_sync"] not in choices:
-        print(f"[Error] 'call_sync' in pad '{pad}' should be one of {repr(choices)}")
-        continue
-
-    server_address = (pad_host, pad_port)
-    match pad_type:
-        case "TCP":
-            ServerClass = TCPServer
-            RequestHandlerClass = TCPHandler
-        case "UDP":
-            ServerClass = UDPServer
-            RequestHandlerClass = UDPHandler
-        case _type:
-            print(f"[Error] Server type '{_type}' in pad '{
-                  pad}' is invalid, only 'TCP' and 'UDP' supported")
-            continue
-
-    # Start server thread
-    server = ServerClass(server_address, RequestHandlerClass)
-    server.setup_rules(pad_rules, pad_config)
-    server_thread = threading.Thread(target=server.serve_forever)
-    server_thread.start()
-    print(f"{pad_type} Server {
-          server_address} running in thread {server_thread.name}")
-    servers.append((server, server_thread))
+    create_servers(config)
