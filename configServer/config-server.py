@@ -77,6 +77,7 @@ def create_servers(config):
 
 class RulesMixIn(socketserver.BaseServer):
     def setup_rules(self, pad_rules: dict[str, str], pad_config: dict):
+        self.memo = {} # memory-persistent data storage to manipulate complex operations
         self.rules: dict[str, list[tuple[str | None, str | list[str]]]] = {}
         self.default_eval: str = pad_config["default_eval"]
         self.call_sync: str = pad_config["call_sync"]
@@ -166,6 +167,7 @@ class RulesMixIn(socketserver.BaseServer):
                 args = (["python", "-c", command],)
             case "eval":
                 # simple match will add the values to the scope
+                memo = self.memo
                 match event:
                     case {"id": id, "type": "SWITCH" | "BUTTON" as type, "state": state}: pass
                     case {"id": id, "type": "DPAD" as type, "state": state, "button": button}: pass
@@ -217,6 +219,7 @@ class RulesMixIn(socketserver.BaseServer):
         # will find the pattern __{}__ and interpret as a fstring
         if self.fstring_sim:
             # simple match will add the values to the scope
+            memo = self.memo
             match event:
                 case {"id": id, "type": "SWITCH" | "BUTTON" as type, "state": state}: pass
                 case {"id": id, "type": "DPAD" as type, "state": state, "button": button}: pass
