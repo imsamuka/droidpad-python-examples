@@ -279,7 +279,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1]:
         config_file = sys.argv[1]
     else:
-        config_file = "configServer/droidpad-servers.toml"
+        config_file = "configServer/default.toml"
 
     with open(config_file, "rb") as f:
         config = tomllib.load(f)
