@@ -4,9 +4,8 @@ port = 8080
 type = "UDP" # Only "TCP" or "UDP" accepted
 
 # What will be executed when the event is detected
-# "sh" - passthrough to the 'sh' executable
-# "bash" - passthrough to the 'bash' executable
-# "py" - passthrough to the 'python' executable
+# "py", "sh", "bash", "cmd", "powershell", "pwsh" - pass as a script to the executable
+#     Example: 'python -c "print(42)"'
 # "eval" - plain eval() python call, with scope variables
 # "exec" - passthrough a list of arguments to any executable
 default_eval = "sh"

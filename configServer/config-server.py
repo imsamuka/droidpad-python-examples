@@ -41,7 +41,7 @@ def create_servers(config):
             print(f"[Error] 'format_map' in pad '{pad}' is not a boolean true or false.")
             continue
 
-        choices = ("sh", "bash", "py", "eval", "exec")
+        choices = ("sh", "bash", "cmd", "powershell", "pwsh", "py", "eval", "exec")
         if pad_config["default_eval"] not in choices:
             print(f"[Error] 'default_eval' in pad '{pad}' should be one of {repr(choices)}")
             continue
@@ -163,6 +163,12 @@ class RulesMixIn(socketserver.BaseServer):
                 args = (["sh", "-c", command],)
             case "bash":
                 args = (["bash", "-c", command],)
+            case "cmd":
+                args = (["cmd", "/C", command],)
+            case "powershell":
+                args = (["powershell", "-Command", command],)
+            case "pwsh":
+                args = (["pwsh", "-Command", command],)
             case "py":
                 args = (["python", "-c", command],)
             case "eval":
