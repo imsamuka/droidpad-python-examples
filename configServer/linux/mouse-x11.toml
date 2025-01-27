@@ -23,6 +23,9 @@ mousebtn3-press = "xdotool mousedown 3"
 mousebtn3-release = "xdotool mouseup 3"
 mousebtn3-click = "xdotool click 3"
 
+# Divide the slider value by small discrete steps (0.02)
+# Calculate the distance (wds) between the last (w0s) and current (w1s) step
+# Send up/down mousewheel events with the amount of steps advanced
 mousewheel-slider = """
     __{memo.update(w1s=round(value / 0.02)) or ''}__
     __{memo.update(wds=int(memo['w1s'] - memo.get('w0s', memo['w1s'])), w0s=memo['w1s']) or ''}__
@@ -30,6 +33,8 @@ mousewheel-slider = """
     xdotool click --delay 0 --repeat __{abs(memo['wds'])}__ __{4 + (0 > memo['wds'])}__
 """
 
+# Calculate the distance between the last (x0, y0) and current (x, y) coordinates
+# Move the mouse with the distance multiplied by 'scale' (sensitivity)
 mousepad-joy = """
     __{'' if memo.setdefault('scale', 300) and (x + y) else 'exit;'}__
     xdotool mousemove_relative -- __{int(memo['scale'] * (x - memo.pop('x0', x)))}__ __{int(-memo['scale'] * (y - memo.pop('y0', y)))}__
