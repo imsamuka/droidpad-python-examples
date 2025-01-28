@@ -1,0 +1,42 @@
+# Mouse simulation for Linux using x11
+# Depends on 'xdotool' to work
+# check if its installed with the command 'xdotool --version'
+
+[mouse]
+port = 8080
+type = "UDP"
+call_sync = "threaded_async" # "simple", "threaded_sync" or "threaded_async"
+default_eval = "sh"
+fstring_sim = true
+
+[mouse.rules]
+
+mousebtn1-press = "xdotool mousedown 1"
+mousebtn1-release = "xdotool mouseup 1"
+mousebtn1-click = "xdotool click 1"
+
+mousebtn2-press = "xdotool mousedown 2"
+mousebtn2-release = "xdotool mouseup 2"
+mousebtn2-click = "xdotool click 2"
+
+mousebtn3-press = "xdotool mousedown 3"
+mousebtn3-release = "xdotool mouseup 3"
+mousebtn3-click = "xdotool click 3"
+
+# Divide the slider value by small discrete steps (0.02)
+# Calculate the distance (wds) between the last (w0s) and current (w1s) step
+# Send up/down mousewheel events with the amount of steps advanced
+mousewheel-slider = """
+    __{memo.update(w1s=round(value / 0.02)) or ''}__
+    __{memo.update(wds=int(memo['w1s'] - memo.get('w0s', memo['w1s'])), w0s=memo['w1s']) or ''}__
+    __{'' if 0 < abs(memo['wds']) < 15 else 'exit;'}__
+    xdotool click --delay 0 --repeat __{abs(memo['wds'])}__ __{4 + (0 > memo['wds'])}__
+"""
+
+# Calculate the distance between the last (x0, y0) and current (x, y) coordinates
+# Move the mouse with the distance multiplied by 'scale' (sensitivity)
+mousepad-joy = """
+    __{'' if memo.setdefault('scale', 300) and (x + y) else 'exit;'}__
+    xdotool mousemove_relative -- __{int(memo['scale'] * (x - memo.pop('x0', x)))}__ __{int(-memo['scale'] * (y - memo.pop('y0', y)))}__
+    __{memo.update(x0=x, y0=y) or ''}__
+"""
