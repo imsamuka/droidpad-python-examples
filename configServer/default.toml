@@ -7,7 +7,7 @@ type = "UDP" # Only "TCP" or "UDP" accepted
 display_qr = false
 
 # What will be executed when the event is detected
-# "py", "sh", "bash", "cmd", "powershell", "pwsh" - pass as a script to the executable
+# "py", "sh", "bash", "cmd", "powershell", "pwsh", "ahk" - pass as a script to the executable
 #     Example: 'python -c "print(42)"'
 # "eval" - plain eval() python call, with scope variables
 # "exec" - passthrough a list of arguments to any executable
