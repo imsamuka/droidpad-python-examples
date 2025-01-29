@@ -60,11 +60,11 @@ DroidPad functions as a **BLE peripheral** and sends notifications containing `C
 
 ---
 
-### Configurable Server
+### Configurable Server (by [imsamuka](https://github.com/imsamuka))
 
 This server is configured with a [TOML](https://toml.io) file, and supports multiple TCP/UDP droidpad servers simultaneosly. Theres's a documented [default config file](configServer/default.toml) to use as a reference. There are other examples in the [configServer folder](configServer/).
 
-#### Usage
+### Usage
 
 
 ```bash
@@ -72,7 +72,7 @@ This server is configured with a [TOML](https://toml.io) file, and supports mult
 cd configServer
 ```
 
-##### Running Servers
+## Running Servers
 
 ```bash
 python config-server.py [CONFIG_FILE]
@@ -84,11 +84,11 @@ python config-server.py default.toml
 python config-server.py linux/mouse-x11.toml
 ```
 
-#### Writing Server Configuration
+## Writing Server Configuration
 
 The configuration is always composed of a `[pad_name]` and `[pad_name.rules]`. You can have more than one *pad* per file, but each one has to have these 2 sections.
 
-##### Pad configuration
+## Pad configuration
 In `[pad_name]` you declare the global configuration for this particular *pad*:
 
 ```toml
@@ -105,7 +105,7 @@ format_map = true
 
 **The meaning of each field is explained in the [default configuration file](configServer/default.toml).** It's recommended for Windows users to change `default_eval` to `py`, `cmd` or `powershell`.
 
-##### Rules configuration
+### Rules configuration
 
 In `[pad_name.rules]` you declare all rules about the pad elements themselves.
 
@@ -143,7 +143,7 @@ ELEMENTID-RULETYPE-EVALTYPE = """
   - If `fstring_sim = true`, substrings inside `__{ }__` will be interpreted like a python [f-string](https://docs.python.org/3/reference/lexical_analysis.html#f-strings). This means you can run python code BEFORE the actual command runs. All event fields are in scope, and a dictionary `memo` may be used to store other variables.
   - In the case of eval type `exec`, it expects a list of arguments instead of a single string, for example `["echo", "Element {id} sent a event"]`. If you want multiple commands, you need to use a list inside a list.
 
-#### Examples:
+### Examples:
 
 ```toml
 
