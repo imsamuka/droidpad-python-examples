@@ -41,7 +41,7 @@ def create_servers(config):
             print(f"[Error] 'format_map' in pad '{pad}' is not a boolean true or false.")
             continue
 
-        choices = ("sh", "bash", "cmd", "powershell", "pwsh", "py", "eval", "exec")
+        choices = ("sh", "bash", "cmd", "powershell", "pwsh", "py", "ahk", "eval", "exec")
         if pad_config["default_eval"] not in choices:
             print(f"[Error] 'default_eval' in pad '{pad}' should be one of {repr(choices)}")
             continue
@@ -152,6 +152,7 @@ class RulesMixIn(socketserver.BaseServer):
     def run_command(self, event: dict, command: str | list[str], eval_type: str):
         target = subprocess.run
         args = tuple()
+        kwargs = dict()
 
         match eval_type.lower():
             case "exec":
@@ -169,6 +170,9 @@ class RulesMixIn(socketserver.BaseServer):
                 args = (["powershell", "-Command", command],)
             case "pwsh":
                 args = (["pwsh", "-Command", command],)
+            case "ahk":
+                args = (["AutoHotkey.exe", "*"],)
+                kwargs = {"input":command, "text": True}
             case "py":
                 args = (["python", "-c", command],)
             case "eval":
@@ -189,11 +193,11 @@ class RulesMixIn(socketserver.BaseServer):
 
         match self.call_sync:
             case "simple":
-                target(*args) # type: ignore
+                target(*args, **kwargs) # type: ignore
             case "threaded_async":
-                threading.Thread(target=target, args=args).start()
+                threading.Thread(target=target, args=args, kwargs=kwargs).start()
             case "threaded_sync":
-                thread = threading.Thread(target=target, args=args)
+                thread = threading.Thread(target=target, args=args, kwargs=kwargs)
                 thread.start()
                 thread.join()
             case _:
