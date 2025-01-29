@@ -32,6 +32,7 @@ cd droidpad-python-examples/servers
 
 Create a new controller in [DroidPad](https://github.com/umer0586/DroidPad). Then, navigate to the connection settings and specify the IP address and port number. Once connected, and you should see JSON messages being printed in the console.
 
+---
 
 ### Bluetooth Low Energy (BLE) in DroidPad
 
@@ -56,3 +57,136 @@ DroidPad functions as a **BLE peripheral** and sends notifications containing `C
    - Once the script connects to DroidPad, it displays `CSV` strings in the console.
    - These notifications are triggered by interactions with items on the control pad.
 
+
+---
+
+### Configurable Server
+
+This server is configured with a [TOML](https://toml.io) file, and supports multiple TCP/UDP droidpad servers simultaneosly. Theres's a documented [default config file](configServer/default.toml) to use as a reference. There are other examples in the [configServer folder](configServer/).
+
+#### Installing
+
+
+```bash
+# 1. Clone this Repo
+git clone https://github.com/umer0586/droidpad-python-examples
+
+# 2. Enter repo directory
+cd droidpad-python-examples
+
+# 3. Install requirements
+pip install -r requirements.txt
+
+# 4. Enter configServer directory
+cd configServer
+```
+
+##### Running Servers
+
+```bash
+python config-server.py [CONFIG_FILE]
+
+# Examples:
+
+python config-server.py default.toml
+
+python config-server.py linux/mouse-x11.toml
+```
+
+#### Writing Server Configuration
+
+The configuration is always composed of a `[pad_name]` and `[pad_name.rules]`. You can have more than one *pad* per file, but each one has to have these 2 sections.
+
+##### Pad configuration
+In `[pad_name]` you declare the global configuration for this particular *pad*:
+
+```toml
+[example]
+
+host = "0.0.0.0"
+port = 8080
+type = "UDP"
+default_eval = "sh"
+call_sync = "threaded_async"
+fstring_sim = true
+format_map = true
+```
+
+**The meaning of each field is explained in the [default configuration file](configServer/default.toml).** It's recommended for Windows users to change `default_eval` to `py`, `cmd` or `powershell`.
+
+##### Rules configuration
+
+In `[pad_name.rules]` you declare all rules about the pad elements themselves.
+
+```toml
+[example.rules]
+
+ctl_id-dp_press = "echo {id} {button} pressed"
+ctl_id-dp_release = "echo {id} {button} released"
+ctl_id-dp_click = "echo {id} {button} clicked"
+```
+
+Each rule field is composed of three parts separated by a `-` character, and a command or list of commands:
+
+```toml
+ELEMENTID-RULETYPE-EVALTYPE = "COMMAND"
+
+ELEMENTID-RULETYPE-EVALTYPE = ["COMMAND_1", "COMMAND_2"]
+
+ELEMENTID-RULETYPE-EVALTYPE = """
+    MULTILINE_COMMAND
+"""
+```
+
+- `ELEMENTID`: Is the ID you configure in the DroidPad App for a control element.
+- `RULETYPE`: Determines the *type* of element and *when* the rule will activate. The possible choices for this part can be found in the [default configuration file](configServer/default.toml).
+- `EVALTYPE`: Determines which program will be used to execute `COMMAND`. For example:
+
+  - `-bash` will run `bash -c "COMMAND"`
+  - `-py` will run `python -c "COMMAND"`
+
+  If `-EVALTYPE` is missing, then the eval type declared in the `default_eval` configuration field is used instead.
+
+- `COMMAND`: How it will be interpreted depends on the eval type.
+  - If `format_map = true`, substrings like `{id} {type} {state} {button}` will be substituited by their values in the event received. For example, if a dpad left button was pressed, `{button}` will be substituited by `LEFT` and `{state}` by `PRESS`. Normal python formatting works, for example in a slider with value `0.9`, `{value:%}` will be `90%`.
+  - If `fstring_sim = true`, substrings inside `__{ }__` will be interpreted like a python [f-string](https://docs.python.org/3/reference/lexical_analysis.html#f-strings). This means you can run python code BEFORE the actual command runs. All event fields are in scope, and a dictionary `memo` may be used to store other variables.
+  - In the case of eval type `exec`, it expects a list of arguments instead of a single string, for example `["echo", "Element {id} sent a event"]`. If you want multiple commands, you need to use a list inside a list.
+
+#### Examples:
+
+```toml
+
+# After tapping a button with id 'turnoff'
+# run the command: sh -c shutdown
+turnoff-click-sh = "shutdown"
+
+# After pressing/release button with id `mousebtn1`
+# run the program 'xdotool' with default_eval
+# to press/release the mouse left button
+mousebtn1-press = "xdotool mousedown 1"
+mousebtn1-release = "xdotool mouseup 1"
+
+# The same as above, using __{}__ substitution
+# uses `fstring_sim = true`
+mousebtn1-button = "xdotool mouse__{'down' if state == 'PRESS' else 'up'}__ 1"
+
+# When a joystick with id 'radius' sends a event
+# Run a python script to print the calculated radius in degrees
+radius-joy-py = """
+import math
+
+x = {x} # <-- uses `format_map = true` here
+y = {y}
+print('Radius: ', math.atan2(y, x) * 180.0 / math.pi)
+"""
+
+# Change the volume of the current media using a slider with id 'volume'
+# Echo the current volume as a percentage
+# uses `format_map = true`
+volume-slider-sh = 'playerctl volume {value}; echo "Volume at {value:%}"'
+
+
+# Convert every button press on a dpad with id 'arrows' to keyboard arrows
+# __{button.title()}__ converts "RIGHT" to "Right"
+arrows-dp_button = "xdotool key__{'down' if state == 'PRESS' else 'up'}__ __{button.title()}__"
+```
