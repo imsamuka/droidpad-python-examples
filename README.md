@@ -64,20 +64,11 @@ DroidPad functions as a **BLE peripheral** and sends notifications containing `C
 
 This server is configured with a [TOML](https://toml.io) file, and supports multiple TCP/UDP droidpad servers simultaneosly. Theres's a documented [default config file](configServer/default.toml) to use as a reference. There are other examples in the [configServer folder](configServer/).
 
-#### Installing
+#### Usage
 
 
 ```bash
-# 1. Clone this Repo
-git clone https://github.com/umer0586/droidpad-python-examples
-
-# 2. Enter repo directory
-cd droidpad-python-examples
-
-# 3. Install requirements
-pip install -r requirements.txt
-
-# 4. Enter configServer directory
+# Enter configServer directory
 cd configServer
 ```
 
