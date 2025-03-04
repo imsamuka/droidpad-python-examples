@@ -1,3 +1,4 @@
+import os
 import re
 import sys
 import threading
@@ -5,6 +6,7 @@ import tomllib
 import socketserver
 import json
 import subprocess
+import argparse
 
 
 def create_servers(config):
@@ -274,14 +276,28 @@ class TCPServer(RulesMixIn, socketserver.ThreadingTCPServer):
 class UDPServer(RulesMixIn, socketserver.UDPServer):
     pass  # A thread for each UDP datagram is overkill
 
+def main():
+    parser = argparse.ArgumentParser(
+        description="Droidpad server configured with a TOML file \
+            supporting multiple TCP/UDP servers together",
+        allow_abbrev=False
+    )
+    parser.add_argument('config_file', nargs='?',
+                        default=os.path.join(sys.path[0], "default.toml"))
+    parser.add_argument("--qr", help="display QR Code on startup",
+                        dest="display_qr", action=argparse.BooleanOptionalAction)
 
-if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1]:
-        config_file = sys.argv[1]
-    else:
-        config_file = "configServer/default.toml"
+    args = parser.parse_args()
 
-    with open(config_file, "rb") as f:
+    with open(args.config_file, "rb") as f:
         config = tomllib.load(f)
 
+    if None != args.display_qr:
+        for pad_config in config.values():
+            pad_config["display_qr"] = args.display_qr
+
     create_servers(config)
+
+
+if __name__ == "__main__":
+    main()
