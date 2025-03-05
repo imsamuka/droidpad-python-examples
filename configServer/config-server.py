@@ -4,9 +4,24 @@ import sys
 import threading
 import tomllib
 import socketserver
+import socket
 import json
 import subprocess
 import argparse
+import base64
+import zlib
+import traceback
+
+
+def qr_encode(obj: dict):
+    from qrcode.main import QRCode
+    json_str = json.dumps(obj, ensure_ascii=False, separators=(',', ':'))
+    compressed = zlib.compress(json_str.encode())
+    base64_str = base64.b64encode(compressed).decode("ascii")
+    qr = QRCode()
+    qr.add_data(base64_str)
+    qr.make()
+    return qr
 
 
 def create_servers(config):
@@ -16,6 +31,7 @@ def create_servers(config):
             print(f"[Error] Invalid configuration for pad '{pad}'.")
             continue
 
+        pad_config["name"] = pad
         pad_host = pad_config.setdefault("host", "0.0.0.0")
         pad_port = pad_config.setdefault("port", 8080)
         pad_type = pad_config.setdefault("type", "UDP").upper()
@@ -25,7 +41,6 @@ def create_servers(config):
         pad_config["format_map"] = pad_config.get("format_map", True)
         pad_config["default_eval"] = pad_config.get("default_eval", "sh").lower()
         pad_config["call_sync"] = pad_config.get("call_sync", "threaded_async").lower()
-
 
         if not isinstance(pad_port, int):
             print(f"[Error] Port in pad '{pad}' is not a integer.")
@@ -43,7 +58,8 @@ def create_servers(config):
             print(f"[Error] 'format_map' in pad '{pad}' is not a boolean true or false.")
             continue
 
-        choices = ("sh", "bash", "cmd", "powershell", "pwsh", "py", "eval", "exec")
+        choices = ("sh", "bash", "cmd", "powershell",
+                   "pwsh", "py", "eval", "exec")
         if pad_config["default_eval"] not in choices:
             print(f"[Error] 'default_eval' in pad '{pad}' should be one of {repr(choices)}")
             continue
@@ -69,6 +85,8 @@ def create_servers(config):
         # Start server thread
         server = ServerClass(server_address, RequestHandlerClass)
         server.setup_rules(pad_rules, pad_config)
+        if pad_config.get("display_qr"):
+            server.display_qr(pad_config)
         server_thread = threading.Thread(target=server.serve_forever)
         server_thread.start()
         print(f"{pad_type} Server {
@@ -79,7 +97,7 @@ def create_servers(config):
 
 class RulesMixIn(socketserver.BaseServer):
     def setup_rules(self, pad_rules: dict[str, str], pad_config: dict):
-        self.memo = {} # memory-persistent data storage to manipulate complex operations
+        self.memo = {}  # memory-persistent data storage to manipulate complex operations
         self.rules: dict[str, list[tuple[str | None, str | list[str]]]] = {}
         self.default_eval: str = pad_config["default_eval"]
         self.call_sync: str = pad_config["call_sync"]
@@ -107,7 +125,7 @@ class RulesMixIn(socketserver.BaseServer):
                         continue
 
                     case ("exec", [cmd0, *_]) if isinstance(cmd0, str):
-                        rule_list.append((eval_type, value)) # type: ignore
+                        rule_list.append((eval_type, value))  # type: ignore
 
                     case ("exec", [cmd0, *_]) if isinstance(cmd0, list):
                         for cmd in value:
@@ -126,6 +144,95 @@ class RulesMixIn(socketserver.BaseServer):
                 print(f"[Error] Unsupported value type for rule '{
                       key}': {type(value).__name__}")
                 continue
+
+    def display_qr(self, pad_config: dict):
+        elements = set()
+        el_acts: dict[str, set] = {}
+
+        for rule in self.rules:
+            ctl_id, action = rule.split("-")
+
+            match action:
+                case "switch" | "true" | "false":
+                    ctl_type = "SWITCH"
+                case "joy":
+                    ctl_type = "JOYSTICK"
+                case "slider":
+                    ctl_type = "SLIDER"
+                case "button" | "press" | "release" | "click":
+                    ctl_type = "BUTTON"
+                case _ if action.startswith("dp_"):
+                    ctl_type = "DPAD"
+                case _:
+                    print(f"[WARNING] Invalid action '{action}'")
+                    continue
+            elements.add((ctl_id, ctl_type))
+            el_acts.setdefault(ctl_id, set()).add(action)
+
+        # math to make a litle grid of items, very good with lots of buttons
+        width = 1080
+        height = 1920
+        cols = 4
+        rows = 8
+        offset = width / 20
+        offlmt = cols * rows
+
+        pad_items = []
+        for i, (ctl_id, ctl_type) in enumerate(sorted(elements)):
+            pad_items.append({
+                "controlPadId": 0,
+                "itemIdentifier": ctl_id,
+                "itemType": ctl_type,
+                "offsetX": ((i % cols) * width / cols) + (offset * (i // offlmt)),
+                "offsetY": ((i // cols) % rows * height / rows) + (offset * (i // offlmt)),
+            })
+            props = {}
+            acts = el_acts[ctl_id]
+
+            if ctl_type == "BUTTON":
+                # text is limited to 8 bytes currently
+                props["text"] = ctl_id.title().replace("_", "")[:8]
+
+                # prioritize press+release, otherwise click
+                if {"press", "release"}.issubset(acts):
+                    pass
+                elif "click" in acts:
+                    props["useClickAction"] = True
+            elif ctl_type == "DPAD":
+                if {"dp_press", "dp_release"}.issubset(acts):
+                    pass
+                elif acts.intersection({
+                    "dp_click", "dp_left_click", "dp_right_click",
+                        "dp_up_click", "dp_down_click"}):
+                    props["useClickAction"] = True
+
+            if props:
+                pad_items[-1]["properties"] = json.dumps(props)
+
+        qr_data = {
+            "controlPad": {
+                "name": pad_config["name"],
+                "orientation": "PORTRAIT",
+                "width": width,
+                "height": height
+            },
+            "connectionConfig": {
+                "controlPadId": 0,
+                "connectionType": pad_config["type"],
+                "configJson": json.dumps({
+                    "host": socket.gethostbyname(socket.gethostname()),
+                    "port": pad_config["port"]
+                })
+            },
+            "controlPadItems": pad_items
+        }
+
+        qr = qr_encode(qr_data)
+        qr.print_ascii(invert=True)
+        try:
+            qr.make_image().show()
+        except Exception:
+            print(traceback.format_exc())
 
     def on_event(self, event: dict):
         rules_ids = self.event_ruleids(event)
@@ -148,8 +255,6 @@ class RulesMixIn(socketserver.BaseServer):
                     ),
                     (eval_type or self.default_eval)
                 )
-
-
 
     def run_command(self, event: dict, command: str | list[str], eval_type: str):
         target = subprocess.run
@@ -191,7 +296,7 @@ class RulesMixIn(socketserver.BaseServer):
 
         match self.call_sync:
             case "simple":
-                target(*args) # type: ignore
+                target(*args)  # type: ignore
             case "threaded_async":
                 threading.Thread(target=target, args=args).start()
             case "threaded_sync":
@@ -200,7 +305,6 @@ class RulesMixIn(socketserver.BaseServer):
                 thread.join()
             case _:
                 assert False, f"[Error] Unsupported call_sync '{self.call_sync}'"
-
 
     def event_ruleids(self, event: dict):
         match event:
@@ -221,7 +325,6 @@ class RulesMixIn(socketserver.BaseServer):
 
             case _:
                 assert False, f"[Error] Event without any possible rules: {event}"
-
 
     def cmd_format(self, event: dict, command: str):
         # will find the pattern __{}__ and interpret as a fstring
@@ -275,6 +378,7 @@ class TCPServer(RulesMixIn, socketserver.ThreadingTCPServer):
 
 class UDPServer(RulesMixIn, socketserver.UDPServer):
     pass  # A thread for each UDP datagram is overkill
+
 
 def main():
     parser = argparse.ArgumentParser(

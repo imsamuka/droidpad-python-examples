@@ -3,7 +3,7 @@ host = "0.0.0.0"
 port = 8080
 type = "UDP" # Only "TCP" or "UDP" accepted
 
-# display QR code on the terminal on start up
+# display QR code on the terminal and screen on start up
 display_qr = false
 
 # What will be executed when the event is detected
