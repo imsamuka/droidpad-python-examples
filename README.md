@@ -1,9 +1,9 @@
-## This Repository contains Python examples for [DroidPad](https://github.com/umer0586/DroidPad) Android app 
+## This Repository contains Python examples for [DroidPad](https://github.com/umer0586/DroidPad) Android app
 
 1. ### Clone this Repo
 ```bash
 git clone https://github.com/umer0586/droidpad-python-examples
-```  
+```
 2. ### Install requirements
 ```bash
 pip install -r requirements.txt
@@ -39,13 +39,13 @@ Create a new controller in [DroidPad](https://github.com/umer0586/DroidPad). The
 DroidPad functions as a **BLE peripheral** and sends notifications containing `CSV` strings to connected client through the characteristic UUID: `dc3f5274-33ba-48de-8246-43bf8985b323`.
 
 #### Steps to Connect:
-1. **Start the GATT Server on DroidPad**:  
+1. **Start the GATT Server on DroidPad**:
    - Open a control pad with BLE connection and tap the **Play** button to initialize the GATT server and start advertising.
 
-2. **Subscribe Using the Python Client**:  
+2. **Subscribe Using the Python Client**:
    - Navigate to the `BLEClient` directory in the DroidPad Python examples repository.
    - Run the `subscribe.py` script:
-     
+
      ```bash
      python subscribe.py
      ```
@@ -53,7 +53,7 @@ DroidPad functions as a **BLE peripheral** and sends notifications containing `C
      - Scans for nearby BLE devices advertising the service UUID: `4fbfc1d7-f509-44ab-afe1-62ea40a4b111`.
      - Subscribes to notifications from the characteristic UUID: `dc3f5274-33ba-48de-8246-43bf8985b323`.
 
-3. **View Notifications**:  
+3. **View Notifications**:
    - Once the script connects to DroidPad, it displays `CSV` strings in the console.
    - These notifications are triggered by interactions with items on the control pad.
 
@@ -62,7 +62,7 @@ DroidPad functions as a **BLE peripheral** and sends notifications containing `C
 
 ### Configurable Server (by [imsamuka](https://github.com/imsamuka))
 
-This server is configured with a [TOML](https://toml.io) file, and supports multiple TCP/UDP droidpad servers simultaneosly. Theres's a documented [default config file](configServer/default.toml) to use as a reference. There are other examples in the [configServer folder](configServer/).
+This server is configured with a [TOML](https://toml.io) file, and supports multiple TCP/UDP droidpad servers simultaneosly. Theres's a documented [default config file](configServer/default.toml) to use as a reference. There are other examples in the [configServer folder](configServer/). You can use the `--qr` flag to display a QRCode to import the pads in the app.
 
 ### Usage
 
@@ -75,7 +75,7 @@ cd configServer
 ## Running Servers
 
 ```bash
-python config-server.py [CONFIG_FILE]
+python config-server.py [--qr] [CONFIG_FILE]
 
 # Examples:
 
