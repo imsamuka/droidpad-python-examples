@@ -23,6 +23,11 @@ def qr_encode(obj: dict):
     qr.make()
     return qr
 
+def get_wlan():
+    for ip in socket.gethostbyname_ex(socket.gethostname())[-1]:
+        if ip.startswith("192.168."):
+            return ip
+    return "127.0.0.1"
 
 def create_servers(config):
     servers = []
@@ -220,7 +225,7 @@ class RulesMixIn(socketserver.BaseServer):
                 "controlPadId": 0,
                 "connectionType": pad_config["type"],
                 "configJson": json.dumps({
-                    "host": socket.gethostbyname(socket.gethostname()),
+                    "host": get_wlan(),
                     "port": pad_config["port"]
                 })
             },
