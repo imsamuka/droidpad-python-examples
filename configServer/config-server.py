@@ -10,7 +10,6 @@ import subprocess
 import argparse
 import base64
 import zlib
-import traceback
 
 
 def qr_encode(obj: dict):
@@ -234,10 +233,7 @@ class RulesMixIn(socketserver.BaseServer):
 
         qr = qr_encode(qr_data)
         qr.print_ascii(invert=True)
-        try:
-            qr.make_image().show()
-        except Exception:
-            print(traceback.format_exc())
+        qr.make_image().show()
 
     def on_event(self, event: dict):
         rules_ids = self.event_ruleids(event)
