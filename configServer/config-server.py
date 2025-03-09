@@ -10,7 +10,7 @@ import subprocess
 import argparse
 import base64
 import zlib
-
+import ipaddress
 
 def qr_encode(obj: dict):
     from qrcode.main import QRCode
@@ -24,7 +24,7 @@ def qr_encode(obj: dict):
 
 def get_wlan():
     for ip in socket.gethostbyname_ex(socket.gethostname())[-1]:
-        if ip.startswith("192.168."):
+        if ipaddress.ip_address(ip).is_private:
             return ip
     return "127.0.0.1"
 
