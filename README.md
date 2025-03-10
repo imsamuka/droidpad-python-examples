@@ -62,7 +62,7 @@ DroidPad functions as a **BLE peripheral** and sends notifications containing `C
 
 ### Configurable Server (by [imsamuka](https://github.com/imsamuka))
 
-This server is configured with a [TOML](https://toml.io) file, and supports multiple TCP/UDP droidpad servers simultaneosly. Theres's a documented [default config file](configServer/default.toml) to use as a reference. There are other examples in the [configServer folder](configServer/). You can use the `--qr` flag to display a QRCode to import the pads in the app.
+This server is configured with a [TOML](https://toml.io) file, and supports multiple TCP/UDP droidpad servers simultaneosly. Theres's a documented [default config file](configServer/default.toml) to use as a reference. There are other examples in the [configServer folder](configServer/).
 
 ### Usage
 
@@ -83,6 +83,15 @@ python config-server.py default.toml
 
 python config-server.py linux/mouse-x11.toml
 ```
+
+### Generating QR Code
+
+You can use the `--qr` flag to display a QRCode to import the pads in the app.
+This auto generated import is intended for development use only. The server will
+also try to load a file `pad_name.json` adjacent to the `CONFIG_FILE` and use that
+as a template to generate the QR Code, preserving element positions, scaling, colors,
+and most other properties.
+
 
 ## Writing Server Configuration
 

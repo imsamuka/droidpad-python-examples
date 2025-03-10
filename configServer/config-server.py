@@ -11,6 +11,8 @@ import argparse
 import base64
 import zlib
 import ipaddress
+import pathlib
+
 
 def qr_encode(obj: dict):
     from qrcode.main import QRCode
@@ -22,6 +24,7 @@ def qr_encode(obj: dict):
     qr.make()
     return qr
 
+
 def get_wlan(host: str):
     if host != "0.0.0.0":
         return host
@@ -30,7 +33,8 @@ def get_wlan(host: str):
             return ip
     return "127.0.0.1"
 
-def create_servers(config):
+
+def create_servers(config, config_file):
     servers = []
     for pad, pad_config in config.items():
         if not isinstance(pad_config, dict):
@@ -92,7 +96,7 @@ def create_servers(config):
         server = ServerClass(server_address, RequestHandlerClass)
         server.setup_rules(pad_rules, pad_config)
         if pad_config.get("display_qr"):
-            server.display_qr(pad_config)
+            server.display_qr(pad_config, config_file)
         server_thread = threading.Thread(target=server.serve_forever)
         server_thread.start()
         print(f"{pad_type} Server {
@@ -151,10 +155,57 @@ class RulesMixIn(socketserver.BaseServer):
                       key}': {type(value).__name__}")
                 continue
 
-    def display_qr(self, pad_config: dict):
-        elements = set()
-        el_acts: dict[str, set] = {}
+    def display_qr(self, pad_config: dict, config_file: str):
+        template_path = pathlib.Path(config_file)\
+            .with_name(pad_config["name"]).with_suffix(".json")
+        if template_path.is_file():
+            with open(template_path, "rb") as f:
+                template = json.load(f)
+        else:
+            template = {}
 
+        pad_items, width, height = self._gen_pad_items(
+            template.get("controlPadItems", []))
+
+        qr_data = {
+            "controlPad": template.get("controlPad") or {
+                "name": pad_config["name"],
+                "orientation": "PORTRAIT",
+                "width": width,
+                "height": height
+            },
+            "connectionConfig": {
+                "controlPadId": 0,
+                "connectionType": pad_config["type"],
+                "configJson": json.dumps({
+                    "host": get_wlan(pad_config["host"]),
+                    "port": pad_config["port"]
+                })
+            },
+            "controlPadItems": pad_items
+        }
+
+        qr = qr_encode(qr_data)
+        qr.print_ascii(invert=True)
+        qr.make_image().show()
+
+    def _gen_pad_items(self, template_items: list[dict]):
+        width = 1080
+        height = 1920
+
+        # math to make a litle grid of items, very good with lots of buttons
+        def offsets(i: int):
+            cols = 4
+            rows = 8
+            offset = width / 20
+            offlmt = cols * rows
+            return {
+                "offsetX": ((i % cols) * width / cols) + (offset * (i // offlmt)),
+                "offsetY": ((i // cols) % rows * height / rows) + (offset * (i // offlmt)),
+            }
+
+        elements: set[tuple[str, str]] = set()
+        el_acts: dict[str, set[str]] = {}
         for rule in self.rules:
             ctl_id, action = rule.split("-")
 
@@ -175,37 +226,48 @@ class RulesMixIn(socketserver.BaseServer):
             elements.add((ctl_id, ctl_type))
             el_acts.setdefault(ctl_id, set()).add(action)
 
-        # math to make a litle grid of items, very good with lots of buttons
-        width = 1080
-        height = 1920
-        cols = 4
-        rows = 8
-        offset = width / 20
-        offlmt = cols * rows
-
+        has_template = bool(template_items)
+        template_items_bare = [
+            (str(e["itemIdentifier"]), str(e["itemType"])) for e in template_items]
         pad_items = []
         for i, (ctl_id, ctl_type) in enumerate(sorted(elements)):
-            pad_items.append({
+
+            try:
+                index = template_items_bare.index((ctl_id, ctl_type))
+                template_items_bare.pop(index)
+                pad_item = template_items.pop(index)
+            except ValueError:
+                pad_item = {}
+
+            pad_items.append(pad_item)
+
+            pad_item.update({
                 "controlPadId": 0,
                 "itemIdentifier": ctl_id,
                 "itemType": ctl_type,
-                "offsetX": ((i % cols) * width / cols) + (offset * (i // offlmt)),
-                "offsetY": ((i // cols) % rows * height / rows) + (offset * (i // offlmt)),
             })
-            props = {}
+            if not has_template:
+                pad_item.update(offsets(i))
+
+            props: dict = json.loads(pad_item.get("properties", "{}"))
             acts = el_acts[ctl_id]
 
             if ctl_type == "BUTTON":
                 # text is limited to 8 bytes currently
-                props["text"] = ctl_id.title().replace("_", "")[:8]
+                if not props.get("text"):
+                    props["text"] = ctl_id.title().replace("_", "")[:8]
 
                 # prioritize press+release, otherwise click
-                if {"press", "release"}.issubset(acts):
+                if None != props.get("useClickAction"):
+                    pass
+                elif {"press", "release"}.issubset(acts):
                     pass
                 elif "click" in acts:
                     props["useClickAction"] = True
             elif ctl_type == "DPAD":
-                if {"dp_press", "dp_release"}.issubset(acts):
+                if None != props.get("useClickAction"):
+                    pass
+                elif {"dp_press", "dp_release"}.issubset(acts):
                     pass
                 elif acts.intersection({
                     "dp_click", "dp_left_click", "dp_right_click",
@@ -213,29 +275,16 @@ class RulesMixIn(socketserver.BaseServer):
                     props["useClickAction"] = True
 
             if props:
-                pad_items[-1]["properties"] = json.dumps(props)
+                pad_item["properties"] = json.dumps(props)
 
-        qr_data = {
-            "controlPad": {
-                "name": pad_config["name"],
-                "orientation": "PORTRAIT",
-                "width": width,
-                "height": height
-            },
-            "connectionConfig": {
-                "controlPadId": 0,
-                "connectionType": pad_config["type"],
-                "configJson": json.dumps({
-                    "host": get_wlan(pad_config["host"]),
-                    "port": pad_config["port"]
-                })
-            },
-            "controlPadItems": pad_items
-        }
+        # add missing template_items
+        for pad_item, id_and_type in zip(template_items, template_items_bare):
+            if id_and_type not in elements:
+                continue
+            pad_item.update({"controlPadId": 0})
+            pad_items.append(pad_item)
 
-        qr = qr_encode(qr_data)
-        qr.print_ascii(invert=True)
-        qr.make_image().show()
+        return pad_items, width, height
 
     def on_event(self, event: dict):
         rules_ids = self.event_ruleids(event)
@@ -403,7 +452,7 @@ def main():
         for pad_config in config.values():
             pad_config["display_qr"] = args.display_qr
 
-    create_servers(config)
+    create_servers(config, args.config_file)
 
 
 if __name__ == "__main__":
