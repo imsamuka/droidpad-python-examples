@@ -22,7 +22,9 @@ def qr_encode(obj: dict):
     qr.make()
     return qr
 
-def get_wlan():
+def get_wlan(host: str):
+    if host != "0.0.0.0":
+        return host
     for ip in socket.gethostbyname_ex(socket.gethostname())[-1]:
         if ipaddress.ip_address(ip).is_private:
             return ip
@@ -224,7 +226,7 @@ class RulesMixIn(socketserver.BaseServer):
                 "controlPadId": 0,
                 "connectionType": pad_config["type"],
                 "configJson": json.dumps({
-                    "host": get_wlan(),
+                    "host": get_wlan(pad_config["host"]),
                     "port": pad_config["port"]
                 })
             },
