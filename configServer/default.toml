@@ -3,6 +3,9 @@ host = "0.0.0.0"
 port = 8080
 type = "UDP" # Only "TCP" or "UDP" accepted
 
+# display QR code on the terminal and screen on start up
+display_qr = false
+
 # What will be executed when the event is detected
 # "py", "sh", "bash", "cmd", "powershell", "pwsh" - pass as a script to the executable
 #     Example: 'python -c "print(42)"'

@@ -1,0 +1,88 @@
+{
+    "controlPad": {
+        "name": "default",
+        "orientation": "PORTRAIT",
+        "width": 1080,
+        "height": 2052
+    },
+    "controlPadItems": [
+        {
+            "itemIdentifier": "arrows",
+            "controlPadId": 5,
+            "offsetX": 8.8046875,
+            "offsetY": 54.570312,
+            "itemType": "DPAD",
+            "properties": "{\"useClickAction\": true}"
+        },
+        {
+            "itemIdentifier": "ctl_id",
+            "controlPadId": 5,
+            "offsetX": 635.0254,
+            "offsetY": 1153.5479,
+            "itemType": "BUTTON",
+            "properties": "{\"text\": \"CtlId\"}"
+        },
+        {
+            "itemIdentifier": "ctl_id",
+            "controlPadId": 5,
+            "offsetX": 573.42676,
+            "offsetY": 58.125,
+            "itemType": "DPAD"
+        },
+        {
+            "itemIdentifier": "ctl_id",
+            "controlPadId": 5,
+            "offsetX": 57.756836,
+            "offsetY": 1529.1143,
+            "itemType": "JOYSTICK"
+        },
+        {
+            "itemIdentifier": "ctl_id",
+            "controlPadId": 5,
+            "offsetX": 110.61426,
+            "offsetY": 656.0918,
+            "itemType": "SLIDER"
+        },
+        {
+            "itemIdentifier": "ctl_id",
+            "controlPadId": 5,
+            "offsetX": 822.4961,
+            "offsetY": 660.33496,
+            "itemType": "SWITCH"
+        },
+        {
+            "itemIdentifier": "radius",
+            "controlPadId": 5,
+            "offsetX": 572.5508,
+            "offsetY": 1527.1152,
+            "itemType": "JOYSTICK"
+        },
+        {
+            "itemIdentifier": "resume",
+            "controlPadId": 5,
+            "offsetX": 813.0459,
+            "offsetY": 921.9551,
+            "itemType": "SWITCH"
+        },
+        {
+            "itemIdentifier": "uptime",
+            "controlPadId": 5,
+            "offsetX": 206.16797,
+            "offsetY": 1153.5674,
+            "itemType": "BUTTON",
+            "properties": "{\"text\": \"Uptime\", \"useClickAction\": true}"
+        },
+        {
+            "itemIdentifier": "volume",
+            "controlPadId": 5,
+            "offsetX": 112.02637,
+            "offsetY": 901.00977,
+            "itemType": "SLIDER"
+        }
+    ],
+    "connectionConfig": {
+        "controlPadId": 5,
+        "connectionType": "UDP",
+        "configJson": "{\"host\": \"192.168.56.2\", \"port\": 8080}"
+    }
+}
